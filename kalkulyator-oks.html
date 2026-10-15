@@ -1,0 +1,756 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Калькулятор для ландшафтных работ и работ с ОКС Амина</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22 width=%22256%22 height=%22256%22%3E%3Ctitle%3E%D0%9A%D0%B0%D0%BB%D1%8C%D0%BA%D1%83%D0%BB%D1%8F%D1%82%D0%BE%D1%80 %D0%B4%D0%BB%D1%8F %D0%9E%D0%9A%D0%A1 %D0%90%D0%BC%D0%B8%D0%BD%D0%B0%3C/title%3E%3Crect width=%2264%22 height=%2264%22 rx=%2215%22 fill=%22%231d6a49%22/%3E%3Cpath d=%22M32 33V19%22 stroke=%22%23fff%22 stroke-width=%223%22 stroke-linecap=%22round%22 fill=%22none%22/%3E%3Cpath d=%22M32 26C25.5 26 20.5 22.5 18.5 15.5C25 15.5 30 19 32 26Z%22 fill=%22%23fff%22/%3E%3Cpath d=%22M32 21.5C37.5 21.5 42.5 18 45.5 10.5C39 10.5 34 14 32 21.5Z%22 fill=%22%23f0b938%22/%3E%3Crect x=%2215%22 y=%2231%22 width=%2234%22 height=%227%22 rx=%222.5%22 fill=%22%23fff%22/%3E%3Cpath d=%22M18.5 38H45.5L42.5 54.5Q42.2 56 40.7 56H23.3Q21.8 56 21.5 54.5Z%22 fill=%22%23fff%22/%3E%3Cpath d=%22M26.5 44H37.5M26.5 49.5H37.5%22 stroke=%22%231d6a49%22 stroke-width=%223%22 stroke-linecap=%22round%22/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Golos+Text:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Раскладка как у «Калькулятора питомника»: слева блоки ввода, справа липкая ведомость, на телефоне она уходит вниз */
+:root {
+  --bg: #eef1ec;
+  --panel: #ffffff;
+  --ink: #18221c;
+  --muted: #5b6a60;
+  --line: #d3dbd3;
+  --accent: #1d6a49;
+  --accent-ink: #ffffff;
+  --mark: #e0a419;
+  --mark-soft: #fbf0d2;
+  --field: #f7f9f6;
+  --ok: #1d6a49;
+  --err: #b3261e;
+  --display: "Unbounded", "Golos Text", system-ui, sans-serif;
+  --body: "Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111713; --panel: #19211c; --ink: #e5ece6; --muted: #9aab9f; --line: #2c3830;
+    --accent: #4fb585; --accent-ink: #0d1510; --mark: #f0b938; --mark-soft: #3a3016;
+    --field: #141b16; --ok: #4fb585; --err: #f2948d; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111713; --panel: #19211c; --ink: #e5ece6; --muted: #9aab9f; --line: #2c3830;
+  --accent: #4fb585; --accent-ink: #0d1510; --mark: #f0b938; --mark-soft: #3a3016;
+  --field: #141b16; --ok: #4fb585; --err: #f2948d; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--body); margin: 0; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 28px 16px 48px; }
+header.top { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px; margin-bottom: 24px; }
+.brand { font: 500 12px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+h1 { font: 700 clamp(24px, 4vw, 34px)/1.15 var(--display); margin: 6px 0 0; text-wrap: balance; letter-spacing: -.01em; }
+.preduprezhdenie { margin: 8px 0 0; max-width: 60ch; font-size: 13.5px; font-weight: 600; line-height: 1.4; color: var(--err); }
+.lead { color: var(--muted); max-width: 52ch; margin: 0; }
+
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 24px; align-items: start; }
+@media (max-width: 900px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+
+.blocks { display: grid; gap: 14px; min-width: 0; }
+section.blk { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px 18px 20px; min-width: 0; }
+section.blk.off .body { display: none; }
+.blk-head { display: flex; align-items: center; gap: 12px; }
+.blk-head h2 { font: 600 17px/1.3 var(--body); margin: 0; flex: 1; }
+.tag { font: 500 11px/1 var(--mono); letter-spacing: .08em; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 4px 6px; }
+.switch { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; }
+.switch input { width: 18px; height: 18px; accent-color: var(--accent); }
+.body { display: grid; gap: 14px; margin-top: 14px; }
+.row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+label.f, div.f { display: grid; gap: 5px; font-size: 13px; color: var(--muted); min-width: 0; }
+label.f.wide { grid-column: 1 / -1; }
+input[data-num], input[type=text], input[type=email], input[type=tel], select, textarea {
+  font: 500 15px/1.3 var(--body); color: var(--ink); background: var(--field);
+  border: 1px solid var(--line); border-radius: 7px; padding: 9px 10px; width: 100%; min-width: 0;
+}
+input[data-num] { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+textarea { resize: vertical; }
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.hint { font-size: 12.5px; color: var(--muted); margin: 0; }
+.warn { font-size: 13px; color: var(--err); margin: 0; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; flex-wrap: wrap; }
+.seg label { cursor: pointer; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg span { display: block; padding: 8px 12px; font: 500 14px/1.2 var(--mono); }
+.seg input:checked + span { background: var(--accent); color: var(--accent-ink); }
+.seg input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: -2px; }
+.inline-res { font: 500 13.5px/1.4 var(--mono); background: var(--mark-soft); border-radius: 6px; padding: 8px 10px; font-variant-numeric: tabular-nums; }
+
+/* Ведомость */
+aside.sheet { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; min-width: 0; }
+@media (max-width: 900px) { aside.sheet { position: static; } }
+.sheet-head { background: var(--ink); color: var(--bg); padding: 14px 18px; display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.sheet-head b { font: 700 15px/1.2 var(--display); }
+.sheet-head span { font: 400 12px/1 var(--mono); opacity: .75; }
+.sheet-sum { padding: 12px 18px; border-bottom: 1px solid var(--line); font: 400 12.5px/1.45 var(--mono); color: var(--muted); }
+.sheet-body { padding: 6px 18px 4px; }
+.line-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; padding: 11px 0; border-bottom: 1px dashed var(--line); }
+.line-item:last-child { border-bottom: 0; }
+.li-name { font-size: 13px; color: var(--muted); }
+.li-pos { font-size: 13.5px; grid-column: 1 / -1; overflow-wrap: anywhere; }
+.li-pos a { color: inherit; }
+.li-val { font: 500 17px/1.2 var(--mono); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.li-pack { font: 400 12.5px/1.3 var(--mono); color: var(--ink); grid-column: 1 / -1; }
+.li-pack em { font-style: normal; background: var(--mark); color: #1d1a10; padding: 1px 6px; border-radius: 3px; }
+.sheet-actions { display: grid; gap: 8px; padding: 14px 18px 18px; border-top: 1px solid var(--line); }
+button { font: 600 14.5px/1 var(--body); border-radius: 8px; padding: 12px 14px; cursor: pointer; border: 1px solid var(--accent); }
+.btn-main { background: var(--accent); color: var(--accent-ink); }
+.btn-sec { background: transparent; color: var(--accent); }
+button:disabled { opacity: .55; cursor: progress; }
+.note { font-size: 12px; color: var(--muted); padding: 0 18px 16px; margin: 0; }
+
+/* Заявка */
+.send { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: grid; gap: 12px; }
+.send h2 { font: 600 17px/1.3 var(--body); margin: 0; }
+.chk { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: var(--muted); }
+.chk input { margin-top: 3px; accent-color: var(--accent); }
+.status { font-size: 13.5px; margin: 0; min-height: 1.2em; }
+.status.ok { color: var(--ok); } .status.err { color: var(--err); }
+.mail { font-family: var(--mono); user-select: all; }
+@media (prefers-reduced-motion: no-preference) { button { transition: filter .15s; } button:hover { filter: brightness(1.08); } }
+
+/* Телефоны: 16px — иначе iPhone увеличивает страницу при вводе */
+@media (max-width: 900px) { input, select, textarea { font-size: 16px !important; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="brand">Амина · aminaplast.ru</div>
+      <h1>Калькулятор для ландшафтных работ и работ с ОКС</h1>
+      <p class="preduprezhdenie">Расчёт ориентировочный: нормы внесения и коэффициенты взяты по рекомендациям производителей и практике питомников. Перед закупкой сверьте с агрономом.</p>
+    </div>
+    <p class="lead">Сколько грунта засыпать в посадочную яму, сколько мешковины и сетки нужно на ком, сколько коры на мульчу, агроткани и спанбонда на участок. Позиции взяты из каталога aminaplast.ru, цены здесь не считаются.</p>
+  </header>
+
+  <div class="grid">
+    <div class="blocks">
+
+      <!-- 1. Ком -->
+      <section class="blk" id="b-kom">
+        <div class="blk-head"><span class="tag">СМ</span><h2>Ком</h2></div>
+        <div class="body">
+          <div class="f"><span class="hint">Диаметр кома, см</span>
+            <div class="seg" id="kom-seg"></div>
+          </div>
+          <div class="row">
+            <label class="f">Высота кома, см<input type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" data-num id="kom-h" min="10" step="5"></label>
+            <label class="f">Количество растений, шт.<input type="text" inputmode="numeric" autocomplete="off" enterkeyhint="done" data-num id="n" min="1" step="1" value="1"></label>
+          </div>
+          <p class="hint">Высота подставляется автоматически, примерно 2/3 диаметра. Если ком выше или ниже, исправьте значение.</p>
+          <div class="inline-res" id="r-kom"></div>
+        </div>
+      </section>
+
+      <!-- 2. Яма -->
+      <section class="blk" id="b-yama">
+        <div class="blk-head"><span class="tag">Ø × H</span><h2>Яма выкопочная (посадочная)</h2></div>
+        <div class="body">
+          <div class="row">
+            <label class="f">Диаметр ямы, см<input type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" data-num id="yama-d" min="10" step="5"></label>
+            <label class="f">Глубина ямы, см<input type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" data-num id="yama-h" min="10" step="5"></label>
+          </div>
+          <p class="hint">По умолчанию яма на 20 см шире кома и на 20 см глубже. Размер пересчитывается при смене кома. Если яма копается другого размера, введите свои цифры.</p>
+          <p class="warn" id="w-yama" hidden></p>
+          <div class="inline-res" id="r-yama"></div>
+        </div>
+      </section>
+
+      <!-- 3. Мешковина -->
+      <section class="blk" id="b-mesh">
+        <div class="blk-head"><span class="tag">РУЛОН</span><h2>Мешковина</h2><label class="switch"><input type="checkbox" id="on-mesh" checked>в расчёт</label></div>
+        <div class="body">
+          <label class="f wide">Мешковина<select id="mesh"></select></label>
+          <div class="row">
+            <label class="f">Запас на нахлёст и завязку, см<input type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" data-num id="mesh-zap" min="0" step="5" value="20"></label>
+          </div>
+          <p class="hint">Нужный размер ткани X = диаметр кома + 2 × высота кома + 20 см на нахлёст и завязку. Если X не больше 110 см (ширина рулона), на ком уходит один квадратный отрез 1,1 м. Если больше, ком обматывают двумя полосами длиной X крест-накрест.</p>
+          <div class="inline-res" id="r-mesh"></div>
+        </div>
+      </section>
+
+      <!-- 4. Сетка -->
+      <section class="blk" id="b-setka">
+        <div class="blk-head"><span class="tag">ШТ</span><h2>Сетка для упаковки кома</h2><label class="switch"><input type="checkbox" id="on-setka" checked>в расчёт</label></div>
+        <div class="body">
+          <label class="f wide">Сетка (подобрана по диаметру кома)<select id="setka"></select></label>
+          <p class="hint">Сетка подбирается по диаметру кома: для кома 50 см нужна сетка d 500 мм. Если точного размера нет в каталоге, берётся ближайший больший. Вид сетки и фасовку можно выбрать.</p>
+          <p class="warn" id="w-setka" hidden></p>
+          <div class="inline-res" id="r-setka"></div>
+        </div>
+      </section>
+
+      <!-- 5. Грунт -->
+      <section class="blk" id="b-grunt">
+        <div class="blk-head"><span class="tag">Л</span><h2>Грунт (субстраты)</h2><label class="switch"><input type="checkbox" id="on-grunt" checked>в расчёт</label></div>
+        <div class="body">
+          <label class="f wide">Грунт, субстрат или торф<select id="grunt"></select></label>
+          <div class="row">
+            <label class="f">Коэффициент уплотнения<input type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" data-num id="kupl" min="1" max="1.6" step="0.05" value="1"></label>
+          </div>
+          <p class="hint">Грунт = объём ямы минус объём кома. Рыхлый торфяной грунт после полива оседает, поэтому для запаса ставьте коэффициент 1,1–1,2.</p>
+          <div class="inline-res" id="r-grunt"></div>
+        </div>
+      </section>
+
+      <!-- 6. Кора -->
+      <section class="blk" id="b-kora">
+        <div class="blk-head"><span class="tag">М²</span><h2>Кора для мульчирования</h2><label class="switch"><input type="checkbox" id="on-kora" checked>в расчёт</label></div>
+        <div class="body">
+          <label class="f wide">Кора<select id="kora"></select></label>
+          <div class="row">
+            <label class="f">Площадь мульчирования, м²<input type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" data-num id="kora-m2" min="0" step="0.5" value="1"></label>
+            <label class="f">Толщина слоя, см<input type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" data-num id="kora-sloy" min="1" step="1" value="5"></label>
+          </div>
+          <p class="hint">Один мешок коры 60 л покрывает 1 м² слоем около 5 см. При более толстом слое мешков нужно пропорционально больше.</p>
+          <div class="inline-res" id="r-kora"></div>
+        </div>
+      </section>
+
+      <!-- 7. Агроткань -->
+      <section class="blk" id="b-tkan">
+        <div class="blk-head"><span class="tag">РУЛОН</span><h2>Агроткань</h2><label class="switch"><input type="checkbox" id="on-tkan" checked>в расчёт</label></div>
+        <div class="body">
+          <label class="f wide">Агроткань<select id="tkan"></select></label>
+          <div class="row">
+            <label class="f">Длина участка, м<input type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" data-num id="t-dl" min="0" step="0.5" value="5"></label>
+            <label class="f">Ширина участка, м<input type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" data-num id="t-sh" min="0" step="0.5" value="2"></label>
+            <label class="f">Запас на подворот с каждой стороны, см<input type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" data-num id="t-zap" min="0" step="1" value="20"></label>
+          </div>
+          <div class="row">
+            <label class="f">Крепёж<select id="t-krep"></select></label>
+          </div>
+          <p class="hint">Агроткань стелют под мульчу и посадки от сорняков. Полосы кладут вдоль длинной стороны встык, края подворачивают или прикапывают. Колышки ставят с шагом 0,5 м по обеим длинным сторонам каждой полосы, включая крайние: 20 м полосы → 40 интервалов + 1 = 41 на сторону, 82 на полосу. В местах посадки ткань прорезают крестом.</p>
+          <div class="inline-res" id="r-tkan"></div>
+        </div>
+      </section>
+
+      <!-- 8. Спанбонд -->
+      <section class="blk" id="b-span">
+        <div class="blk-head"><span class="tag">РУЛОН</span><h2>Спанбонд</h2><label class="switch"><input type="checkbox" id="on-span" checked>в расчёт</label></div>
+        <div class="body">
+          <label class="f wide">Спанбонд<select id="span"></select></label>
+          <div class="row">
+            <label class="f">Длина укрываемого участка, м<input type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" data-num id="s-dl" min="0" step="0.5" value="5"></label>
+            <label class="f">Ширина укрываемого участка, м<input type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" data-num id="s-sh" min="0" step="0.5" value="2"></label>
+            <label class="f">Число слоёв<input type="text" inputmode="numeric" autocomplete="off" enterkeyhint="done" data-num id="s-sloi" min="1" max="3" step="1" value="1"></label>
+            <label class="f">Запас на подворот с каждой стороны, см<input type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" data-num id="s-zap" min="0" step="1" value="30"></label>
+          </div>
+          <div class="row">
+            <label class="f">Крепёж<select id="s-krep"></select></label>
+          </div>
+          <p class="hint">Белый спанбонд 30–60 г/м² — укрытие посадок от заморозков и солнца, 60 г/м² и плотнее — зимнее укрытие хвойных и кустарников, часто в 2 слоя. Чёрный — мульча от сорняков. Ширина рулона 3,2 м, ширина участка — с учётом высоты растений, если укрываете их сверху.</p>
+          <div class="inline-res" id="r-span"></div>
+        </div>
+      </section>
+
+      <!-- 9. Дополнительные данные и отправка -->
+      <form class="send" id="form-send" novalidate>
+        <h2>Дополнительные данные</h2>
+        <label class="f wide">Какие ещё товары нужны: удобрения, опоры, агроткань, горшки и т. п.<textarea id="k-dop" rows="3" placeholder="Например: 10 бамбуковых опор 150 см, удобрение для хвойных"></textarea></label>
+        <p class="hint">Заявка вместе с расчётом уйдёт на <span class="mail">info@aminaplast.ru</span>. Менеджер проверит позиции, наличие и пришлёт цены.</p>
+        <div class="row">
+          <label class="f">Имя<input type="text" id="k-name" autocomplete="name" required></label>
+          <label class="f">Телефон<input type="tel" id="k-tel" autocomplete="tel" required></label>
+          <label class="f">E-mail<input type="email" id="k-mail" autocomplete="email"></label>
+          <label class="f">Компания, город<input type="text" id="k-org" autocomplete="organization"></label>
+        </div>
+        <label class="chk"><input type="checkbox" id="k-soglasie" required>Согласен на обработку персональных данных для связи по этой заявке</label>
+        <button type="submit" class="btn-main" id="btn-send">Отправить заявку</button>
+        <p class="status" id="st-send" role="status"></p>
+      </form>
+    </div>
+
+    <aside class="sheet" aria-label="Ведомость материалов">
+      <div class="sheet-head"><b>Ведомость материалов</b><span id="sheet-date"></span></div>
+      <div class="sheet-sum" id="sheet-sum"></div>
+      <div class="sheet-body" id="sheet"></div>
+      <div class="sheet-actions">
+        <button type="button" class="btn-main" id="btn-word">Скачать расчёт в Word</button>
+        <button type="button" class="btn-sec" id="btn-to-form">Отправить заявку менеджеру</button>
+        <p class="status" id="st-word" role="status"></p>
+      </div>
+      <p class="note">Расчёт ориентировочный: ком и яма считаются как цилиндры. Перед закупкой уточните позиции у менеджера.</p>
+    </aside>
+  </div>
+</div>
+
+<script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
+
+<!-- Логика расчёта: чистые функции, без обращения к странице -->
+<script id="logika">
+// Каталог aminaplast.ru (собран 12.10.2026)
+const KATALOG = {
+  komy: [40, 50, 60, 70, 80, 90, 100, 120, 150],
+  meshkovina: [
+    { nazv: "Ткань упаковочная - мешковина 1,1 м × 100 м, 160 г/м2, 22х25 нитей, джут", url: "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/meshkovina/tkan-upakovochnaya-meshkovina-11-m-100-m-160-gm2-22h25-nitej/", shir_m: 1.1, dlina_m: 100 },
+    { nazv: "Ткань упаковочная - мешковина 1,1 м × 100 м, 190 г/м2, 33х25 нитей, джут", url: "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/meshkovina/tkan-upakovochnaya-meshkovina-11-m-100-m-190-gm2-33h25-nitej/", shir_m: 1.1, dlina_m: 100 },
+    { nazv: "Ткань упаковочная - мешковина 1,1 м × 100 м, 240 г/м2, 46х30 нитей, джут", url: "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/meshkovina/tkan-upakovochnaya-meshkovina-11-m-100-m-240-gm2-46h30-nitej/", shir_m: 1.1, dlina_m: 100 },
+  ],
+  // d — диаметр сетки, мм; upak — штук в упаковке
+  setka: [
+    { nazv: "Сетка для упаковки кома d 400мм (50 шт/уп)", d: 400, upak: 50, url: "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/setka-dlya-komov/setka-dlya-upakovki-koma-d-400mm-50-sht/" },
+    { nazv: "Сетка для упаковки кома d 400мм (100 шт/уп)", d: 400, upak: 100, url: "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/setka-dlya-komov/setka-dlya-upakovki-koma-d-400mm-100-sht/" },
+    { nazv: "Сетка для упаковки кома d 450мм (50 шт/уп)", d: 450, upak: 50, url: "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/setka-dlya-komov/setka-dlya-upakovki-koma-d-450mm-50-sht/" },
+    { nazv: "Сетка для упаковки кома d 450мм (100 шт/уп)", d: 450, upak: 100, url: "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/setka-dlya-komov/setka-dlya-upakovki-koma-d-450mm-100-sht/" },
+    { nazv: "Сетка для упаковки кома d 500мм (50 шт/уп) рабица", d: 500, upak: 50, url: "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/setka-dlya-komov/setka-dlya-upakovki-koma-d-500mm-50-sht/" },
+    { nazv: "Сетка для упаковки кома d 600мм (40 шт/уп) рабица", d: 600, upak: 40, url: "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/setka-dlya-komov/setka-dlya-upakovki-koma-d-600mm-40-sht-rabica/" },
+    { nazv: "Сетка для упаковки кома d 600мм (40 шт/уп)", d: 600, upak: 40, url: "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/setka-dlya-komov/setka-dlya-upakovki-koma-d-600mm-40-sht/" },
+    { nazv: "Сетка для упаковки кома d 600мм (50 шт/уп) рабица", d: 600, upak: 50, url: "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/setka-dlya-komov/setka-dlya-upakovki-koma-d-600mm-50-sht/" },
+    { nazv: "Сетка для упаковки кома d 700мм (25 шт/уп) рабица", d: 700, upak: 25, url: "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/setka-dlya-komov/setka-dlya-upakovki-koma-d-700mm-25-sht-rabica/" },
+    { nazv: "Сетка для упаковки кома d 700мм (40 шт/уп) рабица", d: 700, upak: 40, url: "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/setka-dlya-komov/setka-dlya-upakovki-koma-d-700mm-40-sht-rabica/" },
+    { nazv: "Сетка для упаковки кома d 700мм (40 шт/уп) ромашка", d: 700, upak: 40, url: "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/setka-dlya-komov/setka-dlya-upakovki-koma-d-700mm-40-sht/" },
+    { nazv: "Сетка для упаковки кома d 800мм (25 шт/уп) рабица", d: 800, upak: 25, url: "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/setka-dlya-komov/setka-dlya-upakovki-koma-d-800mm-25-sht/" },
+    { nazv: "Сетка для упаковки кома d 900мм (25 шт/уп) рабица", d: 900, upak: 25, url: "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/setka-dlya-komov/setka-dlya-upakovki-koma-d-900mm-25-sht/" },
+    { nazv: "Сетка для упаковки кома d 1000мм (25 шт/уп)", d: 1000, upak: 25, url: "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/setka-dlya-komov/setka-dlya-upakovki-koma-d-1000mm-25-sht/" },
+    { nazv: "Сетка для упаковки кома d 1000мм (25 шт/уп) рабица", d: 1000, upak: 25, url: "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/setka-dlya-komov/setka-dlya-upakovki-koma-d-1000mm-25-sht-rabica/" },
+    { nazv: "Сетка для упаковки кома d 1100мм (15 шт/уп)", d: 1100, upak: 15, url: "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/setka-dlya-komov/setka-dlya-upakovki-koma-d-1100mm-25-sht/" },
+    { nazv: "Сетка для упаковки кома d 1200мм (10 шт/уп)", d: 1200, upak: 10, url: "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/setka-dlya-komov/setka-dlya-upakovki-koma-d-1200mm-10-sht/" },
+    { nazv: "Сетка для упаковки кома d 1300мм (10 шт/уп)", d: 1300, upak: 10, url: "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/setka-dlya-komov/setka-dlya-upakovki-koma-d-1300mm-10-sht/" },
+    { nazv: "Сетка для упаковки кома d 1400мм (10 шт/уп)", d: 1400, upak: 10, url: "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/setka-dlya-komov/setka-dlya-upakovki-koma-d-1400mm-10-sht/" },
+    { nazv: "Сетка для упаковки кома d 1600мм (5 шт/уп)", d: 1600, upak: 5, url: "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/setka-dlya-komov/setka-dlya-upakovki-koma-d-1600mm-10-sht/" },
+    { nazv: "Сетка для упаковки кома d 1700мм (5 шт/уп)", d: 1700, upak: 5, url: "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/setka-dlya-komov/setka-dlya-upakovki-koma-d-2000mm-5-sht/" },
+    { nazv: "Сетка для упаковки кома d 1800мм (5 шт/уп)", d: 1800, upak: 5, url: "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/setka-dlya-komov/setka-dlya-upakovki-koma-d-1800mm-10-sht/" },
+  ],
+  kora: [
+    { nazv: "Кора лиственницы мелкая (10-30 мм) 60л Россия", upak_l: 60, url: "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/pochvouluchshiteli-mulcha/kora-listvennicy-melkaya-10-30-mm-60l-rossiya/" },
+    { nazv: "Кора лиственницы средняя (20-50 мм) 60л Россия", upak_l: 60, url: "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/pochvouluchshiteli-mulcha/kora-listvennicy-srednyaya-20-50-mm-60l-rossiya/" },
+    { nazv: "Кора лиственницы крупная (60-100 мм) 60л Россия", upak_l: 60, url: "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/pochvouluchshiteli-mulcha/kora-listvennicy-krupnaya-60-100-mm-60l-rossiya/" },
+    { nazv: "Кора лиственницы крупная (90-200 мм) 60л Россия", upak_l: 60, url: "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/pochvouluchshiteli-mulcha/kora-listvennicy-krupnaya-90-200-mm-60l-rossiya/" },
+    { nazv: "Кора сосны крупная фракция (40-100 мм) 60л", upak_l: 60, url: "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/pochvouluchshiteli-mulcha/kora-sosny-krupnaya-frakciya-60-100-mm-60l/" },
+  ],
+  agrotkan: [{"nazv": "Агроткань застилочная 1,05 м × 100 м, 100 г/м2 Чехия", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/agrotkan/chehiya/agrotkan-zastilochnaya-105-m-100-m-100-gm2-chehiya/", "plotn": 100, "shir_m": 1.05, "dlina_m": 100.0}, {"nazv": "Агроткань застилочная 1,05 м × 100 м, 100 г/м2, РФ", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/agrotkan/agrotkan-100-gm2/agrotkan-zastilochnaya-105-m-100-m-100-gm2-rf/", "plotn": 100, "shir_m": 1.05, "dlina_m": 100.0}, {"nazv": "Агроткань застилочная 1,05 м × 100 м, 100 г/м2, РФ белая", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/agrotkan/agrotkan-100-gm2/agrotkan-zastilochnaya-105-m-100-m-100-gm2-rf-belaya/", "plotn": 100, "shir_m": 1.05, "dlina_m": 100.0}, {"nazv": "Агроткань застилочная 1,05 м × 100 м, 130 г/м2, РФ", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/agrotkan/agrotkan-130-gm2/agrotkan-zastilochnaya-105-m-100-m-130-gm2-rf/", "plotn": 130, "shir_m": 1.05, "dlina_m": 100.0}, {"nazv": "Агроткань застилочная 1,05 м × 100 м, 130 г/м2, Чехия", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/agrotkan/chehiya/agrotkan-zastilochnaya-105-m-100-m-130-gm2-chehiya/", "plotn": 130, "shir_m": 1.05, "dlina_m": 100.0}, {"nazv": "Агроткань застилочная 1,05 м × 100 м, 130 г/м2, Чехия белая", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/agrotkan/chehiya/agrotkan-zastilochnaya-105-m-100-m-130-gm2-chehiya-belaya/", "plotn": 130, "shir_m": 1.05, "dlina_m": 100.0}, {"nazv": "Агроткань застилочная 1,60 м × 100 м, 100 г/м2, РФ", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/agrotkan/agrotkan-100-gm2/agrotkan-zastilochnaya-160-m-100-m-100-gm2-rf/", "plotn": 100, "shir_m": 1.6, "dlina_m": 100.0}, {"nazv": "Агроткань застилочная 1,60 м × 100 м, 130 г/м2, РФ", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/agrotkan/agrotkan-130-gm2/agrotkan-zastilochnaya-160-m-100-m-130-gm2-rf/", "plotn": 130, "shir_m": 1.6, "dlina_m": 100.0}, {"nazv": "Агроткань застилочная 1,65 м × 100 м, 100 г/м2, Чехия", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/agrotkan/chehiya/agrotkan-zastilochnaya-165-m-100-m-100-gm2-chehiya/", "plotn": 100, "shir_m": 1.65, "dlina_m": 100.0}, {"nazv": "Агроткань застилочная 1,65 м × 100 м, 130 г/м2, Чехия", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/agrotkan/chehiya/agrotkan-zastilochnaya-165-m-100-m-130-gm2-chehiya-1/", "plotn": 130, "shir_m": 1.65, "dlina_m": 100.0}, {"nazv": "Агроткань застилочная 10,48 м × 100 м, 130 г/м2, Чехия", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/agrotkan/chehiya/agrotkan-zastilochnaya-1048-m-100-m-130-gm2-chehiya/", "plotn": 130, "shir_m": 10.48, "dlina_m": 100.0}, {"nazv": "Агроткань застилочная 2,10 м × 100 м, 100 г/м2, РФ", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/agrotkan/agrotkan-100-gm2/agrotkan-zastilochnaya-210-m-100-m-100-gm2-rf/", "plotn": 100, "shir_m": 2.1, "dlina_m": 100.0}, {"nazv": "Агроткань застилочная 2,10 м × 100 м, 100 г/м2, Чехия", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/agrotkan/chehiya/agrotkan-zastilochnaya-210-m-100-m-100-gm2-chehiya/", "plotn": 100, "shir_m": 2.1, "dlina_m": 100.0}, {"nazv": "Агроткань застилочная 2,10 м × 100 м, 130 г/м2, РФ", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/agrotkan/agrotkan-130-gm2/agrotkan-zastilochnaya-210-m-100-m-130-gm2-rf/", "plotn": 130, "shir_m": 2.1, "dlina_m": 100.0}, {"nazv": "Агроткань застилочная 2,10 м × 100 м, 130 г/м2, Чехия", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/agrotkan/chehiya/agrotkan-zastilochnaya-210-m-100-m-130-gm2-chehiya/", "plotn": 130, "shir_m": 2.1, "dlina_m": 100.0}, {"nazv": "Агроткань застилочная 3,20 м × 100 м, 100 г/м2, РФ", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/agrotkan/agrotkan-100-gm2/agrotkan-zastilochnaya-320-m-100-m-100-gm2-rf/", "plotn": 100, "shir_m": 3.2, "dlina_m": 100.0}, {"nazv": "Агроткань застилочная 3,20 м × 100 м, 130 г/м2, РФ", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/agrotkan/agrotkan-130-gm2/agrotkan-zastilochnaya-320-m-100-m-130-gm2-rf/", "plotn": 130, "shir_m": 3.2, "dlina_m": 100.0}, {"nazv": "Агроткань застилочная 3,30 м × 100 м, 100 г/м2, Чехия", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/agrotkan/chehiya/agrotkan-zastilochnaya-330-m-100-m-100-gm2-chehiya/", "plotn": 100, "shir_m": 3.3, "dlina_m": 100.0}, {"nazv": "Агроткань застилочная 3,30 м × 100 м, 100 г/м2, Чехия, белая", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/agrotkan/chehiya/agrotkan-zastilochnaya-330-m-100-m-100-gm2-chehiya-belaya/", "plotn": 100, "shir_m": 3.3, "dlina_m": 100.0}, {"nazv": "Агроткань застилочная 3,30 м × 100 м, 130 г/м2, Чехия", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/agrotkan/chehiya/agrotkan-zastilochnaya-330-m-100-m-130-gm2-chehiya/", "plotn": 130, "shir_m": 3.3, "dlina_m": 100.0}, {"nazv": "Агроткань застилочная 3,30 м × 100 м, 130 г/м2, Чехия, белая", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/agrotkan/chehiya/agrotkan-zastilochnaya-330-m-100-m-130-gm2-chehiya-belaya/", "plotn": 130, "shir_m": 3.3, "dlina_m": 100.0}, {"nazv": "Агроткань застилочная 4,20 м × 100 м, 100 г/м2, Чехия", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/agrotkan/chehiya/agrotkan-zastilochnaya-420-m-100-m-100-gm2-chehiya/", "plotn": 100, "shir_m": 4.2, "dlina_m": 100.0}, {"nazv": "Агроткань застилочная 4,20 м × 100 м, 130 г/м2, РФ", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/agrotkan/agrotkan-130-gm2/agrotkan-zastilochnaya-420-m-100-m-130-gm2-rf/", "plotn": 130, "shir_m": 4.2, "dlina_m": 100.0}, {"nazv": "Агроткань застилочная 4,20 м × 100 м, 130 г/м2, Чехия", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/agrotkan/chehiya/agrotkan-zastilochnaya-420-m-100-m-130-gm2-chehiya-1/", "plotn": 130, "shir_m": 4.2, "dlina_m": 100.0}, {"nazv": "Агроткань застилочная 4,20 м × 50 м, 130 г/м2, РФ", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/agrotkan/agrotkan-130-gm2/agrotkan-zastilochnaya-420-m-50-m-130-gm2-rf/", "plotn": 130, "shir_m": 4.2, "dlina_m": 50.0}, {"nazv": "Агроткань застилочная 5,25 м × 100 м, 100 г/м2, Чехия", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/agrotkan/chehiya/agrotkan-zastilochnaya-525-m-100-m-100-gm2-chehiya/", "plotn": 100, "shir_m": 5.25, "dlina_m": 100.0}, {"nazv": "Агроткань застилочная 5,25 м × 100 м, 130 г/м2, Чехия", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/agrotkan/chehiya/agrotkan-zastilochnaya-165-m-100-m-130-gm2-chehiya/", "plotn": 130, "shir_m": 5.25, "dlina_m": 100.0}],
+  spanbond: [{"nazv": "Спанбонд 30 г/м2, 3,2 м × 250 м, белый", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/spanbond/spanbond-30-gm2-32-m-250-m-belyj/", "plotn": 30, "shir_m": 3.2, "dlina_m": 250.0, "cvet": "белый"}, {"nazv": "Спанбонд 30 г/м2, 3,2 м × 300 м, белый", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/spanbond/spanbond-30-gm2-32-m-300-m-belyj/", "plotn": 30, "shir_m": 3.2, "dlina_m": 300.0, "cvet": "белый"}, {"nazv": "Спанбонд 40 г/м2, 3,2 м × 200 м, белый", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/spanbond/spanbond-40-gm2-32-m-200-m-belyj/", "plotn": 40, "shir_m": 3.2, "dlina_m": 200.0, "cvet": "белый"}, {"nazv": "Спанбонд 60 г/м2, 3,2 м × 150 м, белый", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/spanbond/spanbond-60-gm2-32-m-150-m-belyj/", "plotn": 60, "shir_m": 3.2, "dlina_m": 150.0, "cvet": "белый"}, {"nazv": "Спанбонд 80 г/м2, 3,2 м × 100 м, белый", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/spanbond/spanbond-80-gm2-32-m-100-m-belyj/", "plotn": 80, "shir_m": 3.2, "dlina_m": 100.0, "cvet": "белый"}, {"nazv": "Спанбонд 100 г/м2, 3,2 м × 100 м, белый", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/spanbond/spanbond-100-gm2-32-m-100-m-belyj/", "plotn": 100, "shir_m": 3.2, "dlina_m": 100.0, "cvet": "белый"}, {"nazv": "Спанбонд 40 г/м2, 3,2 м × 200 м, черный", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/spanbond/spanbond-40-gm2-32-m-200-m-chernyj/", "plotn": 40, "shir_m": 3.2, "dlina_m": 200.0, "cvet": "черный"}, {"nazv": "Спанбонд 60 г/м2, 3,2 м × 150 м, черный", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/spanbond/spanbond-60-gm2-32-m-150-m-chernyj/", "plotn": 60, "shir_m": 3.2, "dlina_m": 150.0, "cvet": "черный"}, {"nazv": "Спанбонд 80 г/м2, 3,2 м × 100 м, черный", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/spanbond/spanbond-80-gm2-32-m-100-m-chernyj/", "plotn": 80, "shir_m": 3.2, "dlina_m": 100.0, "cvet": "черный"}, {"nazv": "Спанбонд 100 г/м2, 3,2 м × 100 м, черный", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/spanbond/spanbond-100-gm2-32-m-100-m-chernyj/", "plotn": 100, "shir_m": 3.2, "dlina_m": 100.0, "cvet": "черный"}, {"nazv": "Спанбонд 130 г/м2, 3,2 м × 50 м, черный", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/spanbond/spanbond-130-gm2-32-m-50-m-chernyj/", "plotn": 130, "shir_m": 3.2, "dlina_m": 50.0, "cvet": "черный"}],
+  krepezh: [{"nazv": "Колышек для крепления укрывного материала 15 см (20 шт.)", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/agrotkan/kolyshek-dlya-krepleniya-ukryvnogo-materiala-15-sm-20-sht/", "krepezh": true, "upak_sht": 20}, {"nazv": "Скобы металлические для крепления укрывного материала 15х4 см (100 шт.)", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/agrotkan/skoby-metallicheskie-dlya-krepleniya-ukryvnogo-materiala-15h/", "krepezh": true, "upak_sht": 100}, {"nazv": "Колышек для крепления укрывного материала 17 см", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/agrotkan/kolyshek-dlya-krepleniya-ukryvnogo-materiala-17-sm/", "krepezh": true, "upak_sht": 1}],
+  grunt: [{"nazv": "Биогрунт Агробалт овощной 50 л", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/grunt/agrobalt-rossiya/biogrunt-agrobalt-ovoshnoj-50-l/", "upak_l": 50.0}, {"nazv": "Биогрунт Агробалт цветочный 50 л", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/grunt/agrobalt-rossiya/biogrunt-agrobalt-cvetochnyj-50-l/", "upak_l": 50.0}, {"nazv": "Грунт Агробалт \"Для голубики\" 70 л", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/grunt/agrobalt-rossiya/grunt-agrobalt-dlya-golubiki-70-l/", "upak_l": 70.0}, {"nazv": "Грунт Агробалт \"Для хвойников\" 70 л", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/grunt/agrobalt-rossiya/grunt-agrobalt-dlya-hvojnikov-70-l/", "upak_l": 70.0}, {"nazv": "Грунт Агробалт \"Садовая земля\" 35 л", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/grunt/agrobalt-rossiya/grunt-agrobalt-sadovaya-zemlya-35-l/", "upak_l": 35.0}, {"nazv": "Грунт Агробалт \"Садовая земля\" 70 л", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/grunt/agrobalt-rossiya/grunt-agrobalt-sadovaya-zemlya-70-l/", "upak_l": 70.0}, {"nazv": "Грунт Агробалт Цветочный универсальный 35 л", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/grunt/agrobalt-rossiya/grunt-agrobalt-cvetochnyj-universalnyj-35-l/", "upak_l": 35.0}, {"nazv": "Грунт Агробалт Цветочный универсальный 70 л", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/grunt/agrobalt-rossiya/grunt-agrobalt-cvetochnyj-universalnyj-70-l/", "upak_l": 70.0}, {"nazv": "Компост Агробалт Плодородие 70 л", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/grunt/agrobalt-rossiya/kompost-agrobalt-plodorodie-70-l/", "upak_l": 70.0}, {"nazv": "Субстрат Агробалт-Премиум фр. 0-6 мм 250 л", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/grunt/agrobalt-rossiya/substrat-agrobalt-premium-fr-0-6-mm-250-l/", "upak_l": 250.0}, {"nazv": "Субстрат Агробалт-С фр. 0-10 мм 150 л", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/grunt/agrobalt-rossiya/substrat-agrobalt-s-fr-0-10-mm-150-l/", "upak_l": 150.0}, {"nazv": "Субстрат Агробалт-С фр. 0-10 мм 250 л", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/grunt/agrobalt-rossiya/substrat-agrobalt-s-fr-0-10-mm-250-l/", "upak_l": 250.0}, {"nazv": "Субстрат Агробалт-С фр. 0-10 мм 300 л", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/grunt/agrobalt-rossiya/substrat-agrobalt-s-fr-0-10-mm-300-l/", "upak_l": 300.0}, {"nazv": "Субстрат Агробалт-С фр. 0-10 мм 6000 л блок", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/grunt/agrobalt-rossiya/substrat-agrobalt-s-fr-0-10-mm-6000-l-blok/", "upak_l": 6000.0}, {"nazv": "Субстрат Агробалт-С фр. 0-20 мм 250 л", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/grunt/agrobalt-rossiya/substrat-agrobalt-s-fr-0-20-mm-250-l/", "upak_l": 250.0}, {"nazv": "Субстрат Агробалт-С фр. 0-20 мм 6000 л блок", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/grunt/agrobalt-rossiya/substrat-agrobalt-s-fr-0-20-mm-6000-l-blok/", "upak_l": 6000.0}, {"nazv": "Субстрат Профимикс фр. 0-5 мм Sowing 225 л блок", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/grunt/profimiks-belarus/substrat-profimiks-fr-0-5-mm-sowing-225-l-blok/", "upak_l": 225.0}, {"nazv": "Субстрат Профимикс фр. 0-20 мм RS2 Basic 250 л блок", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/grunt/profimiks-belarus/substrat-profimiks-fr-0-20-mm-rs2-basic-250-l-blok/", "upak_l": 250.0}, {"nazv": "Субстрат торфяной Агробалт-С фр. 0-10 мм 35 л", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/grunt/agrobalt-rossiya/substrat-torfyanoj-agrobalt-s-fr-0-10-mm-35-l/", "upak_l": 35.0}, {"nazv": "Субстрат торфяной Агробалт-С фр. 0-10 мм 70 л", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/grunt/agrobalt-rossiya/substrat-torfyanoj-agrobalt-s-fr-0-10-mm-70-l/", "upak_l": 70.0}, {"nazv": "Торф Агробалт низинный 35 л", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/grunt/agrobalt-rossiya/torf-agrobalt-nizinnyj-35-l/", "upak_l": 35.0}, {"nazv": "Торф Агробалт низинный 70 л", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/grunt/agrobalt-rossiya/torf-agrobalt-nizinnyj-70-l/", "upak_l": 70.0}, {"nazv": "Торф Верховой Кислый Агробалт-B фр. 0-20 мм 250 л", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/grunt/agrobalt-rossiya/torf-verhovoj-kislyj-agrobalt-b-fr-0-20-mm-250-l/", "upak_l": 250.0}, {"nazv": "Торф Верховой Кислый Агробалт-B фр. 0-20 мм 70 л", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/grunt/agrobalt-rossiya/torf-verhovoj-kislyj-agrobalt-b-fr-0-20-mm-70-l/", "upak_l": 70.0}, {"nazv": "Торф Верховой Кислый Агробалт-B фр. 20-40 мм 250 л", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/grunt/agrobalt-rossiya/torf-verhovoj-kislyj-agrobalt-b-fr-20-40-mm-250-l/", "upak_l": 250.0}, {"nazv": "Торф верховой кислый фр. 0-10 мм 250 л блок", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/grunt/profimiks-belarus/torf-verhovoj-kislyj-fr-0-10-mm-250-l-blok/", "upak_l": 250.0}, {"nazv": "Торф верховой кислый фр. 0-20 мм 250 л блок", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/grunt/profimiks-belarus/torf-verhovoj-kislyj-fr-0-20-mm-250-l-blok/", "upak_l": 250.0}, {"nazv": "Торф Верховой Нейтрализованный Агробалт-H фр. 20-40 мм 250 л", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/grunt/agrobalt-rossiya/torf-verhovoj-nejtralizovannyj-agrobalt-h-fr-20-40-mm-250-l/", "upak_l": 250.0}, {"nazv": "Торф Верховой Нейтрализованный Агробалт-Н фр. 0-20 мм 70 л", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/grunt/agrobalt-rossiya/torf-verhovoj-nejtralizovannyj-agrobalt-n-fr-0-20-mm-70-l/", "upak_l": 70.0}, {"nazv": "Торф верховой нейтрализованный фр. 0-10 мм 250 л блок", "url": "https://aminaplast.ru/soputstvuyushie-tovary-osmokot-agrotkan-i-tp/grunt/profimiks-belarus/torf-verhovoj-nejtralizovannyj-fr-0-10-mm-250-l-blok/", "upak_l": 250.0}],
+};
+
+// Все нормы по умолчанию — здесь
+const NORMY = {
+  zapas: 20,            // яма, мешковина и сетка больше кома на 20 см
+  komH: d => Math.round(d * 0.65 / 5) * 5,   // высота кома ≈ 2/3 диаметра, с шагом 5 см
+  koraSloy: 5,          // 1 мешок 60 л покрывает 1 м² слоем ~5 см
+  krepShag: 0.5,        // шаг колышков по длинным сторонам полос агроткани и спанбонда, м
+  pochtaZayavok: "info@aminaplast.ru",
+};
+
+function fmt(n, d = 0) {
+  if (!isFinite(n)) return "—";
+  return n.toLocaleString("ru-RU", { minimumFractionDigits: 0, maximumFractionDigits: d });
+}
+
+// Объём цилиндра в литрах: диаметр и высота в сантиметрах
+const cilindrL = (dSm, hSm) => Math.PI * (dSm / 2) ** 2 * hSm / 1000;
+
+// Сетки нужного размера: наименьший диаметр из каталога, который не меньше нужного
+function podborSetki(nuzhnoMm, spisok) {
+  const est = spisok.filter(s => s.d >= nuzhnoMm);
+  if (!est.length) return { d: null, varianty: [] };
+  const d = Math.min(...est.map(s => s.d));
+  return { d, varianty: spisok.map((s, i) => [i, s]).filter(([, s]) => s.d === d) };
+}
+
+// Мешковина на 1 ком: X = D + 2·H + запас (см).
+// X ≤ ширины рулона — один квадратный отрез длиной в ширину рулона (1,1 м);
+// X > ширины рулона — две полосы длиной X крест-накрест.
+function meshkovinaNaKom(dSm, hSm, zapSm, shirRulonaSm) {
+  const x = dSm + 2 * hSm + zapSm;
+  if (x <= shirRulonaSm) return { x, polos: 1, dlinaM: shirRulonaSm / 100 };
+  return { x, polos: 2, dlinaM: 2 * x / 100 };
+}
+
+// Рулон на участок: полосы вдоль длинной стороны встык, края подворачиваются.
+// Размеры участка в метрах, подворот в сантиметрах.
+function polosyNaUchastok(dlM, shM, zapSm, t, sloi = 1) {
+  const dl = Math.max(dlM, shM), sh = Math.min(dlM, shM);
+  const zap = zapSm / 100;
+  const shirPokr = sh + 2 * zap;
+  const dlPolosy = dl + 2 * zap;
+  const polos = sh <= 0 ? 0 : t.shir_m >= shirPokr ? 1 : Math.ceil(shirPokr / t.shir_m - 1e-9);
+  const vsegoPolos = polos * sloi;           // слои кладут теми же полосами
+  const pogon = vsegoPolos * dlPolosy;
+  const polosVRulone = Math.floor(t.dlina_m / dlPolosy);
+  const rulonov = polosVRulone >= 1 ? Math.ceil(vsegoPolos / polosVRulone) : Math.ceil(pogon / t.dlina_m - 1e-9);
+  return { dl, sh, sloi, polos, vsegoPolos, dlPolosy, pogon, rulonov, m2: pogon * t.shir_m, styk: polosVRulone < 1 };
+}
+
+// Колышки по двум длинным сторонам каждой полосы:
+// интервалов = длина полосы / шаг, на сторону = интервалы + 1, на полосу — × 2.
+function krepezhSht(p, shagM) {
+  const naStoronu = Math.ceil(p.dlPolosy / shagM - 1e-9) + 1;
+  return naStoronu * 2 * p.polos;
+}
+
+// Строки ведомости для рулонного материала и его крепежа
+function rulonVStroki(r, id, gruppa, krepGruppa, t, p, krep, shag) {
+  r.stroki.push({ id, gruppa, poz: t.nazv, url: t.url,
+    kol: p.m2, ed: "м²",
+    upak: `${fmt(p.rulonov)} рул. по ${fmt(t.dlina_m)} м · ${fmt(p.vsegoPolos)} пол. по ${fmt(p.dlPolosy, 1)} м` +
+      (p.sloi > 1 ? ` · ${p.sloi} слоя` : "") + (p.styk ? " · полосы со стыком" : "") });
+  if (krep && p.polos > 0) {
+    const sht = krepezhSht(p, shag);
+    r.stroki.push({ id: id + "-krep", gruppa: krepGruppa, poz: krep.nazv, url: krep.url,
+      kol: sht, ed: "шт.",
+      upak: krep.upak_sht > 1 ? `${fmt(Math.ceil(sht / krep.upak_sht))} уп. по ${krep.upak_sht} шт.` : `шаг ${fmt(shag, 1)} м` });
+  }
+}
+
+// Главный расчёт. v — введённые значения, k — каталог
+function raschet(v, k) {
+  const r = { v, stroki: [], preduprezhdeniya: [] };
+  const n = Math.max(0, Math.round(v.n));
+  r.n = n;
+  r.vKom = cilindrL(v.komD, v.komH);
+  r.vYama = cilindrL(v.yamaD, v.yamaH);
+  r.gruntNa1 = Math.max(0, r.vYama - r.vKom) * v.kUpl;
+  if (v.yamaD <= v.komD) r.preduprezhdeniya.push("yama-d");
+  if (v.yamaH < v.komH) r.preduprezhdeniya.push("yama-h");
+
+  if (v.onMesh) {
+    const m = k.meshkovina[v.mesh];
+    const mk = meshkovinaNaKom(v.komD, v.komH, v.meshZap, m.shir_m * 100);
+    const pogonM = mk.dlinaM * n;
+    const rulonov = Math.ceil(pogonM / m.dlina_m - 1e-9);
+    r.stroki.push({ id: "mesh", gruppa: "Мешковина", poz: m.nazv, url: m.url,
+      kol: pogonM, ed: "м пог.", d: 2,
+      upak: `${fmt(rulonov)} рул. по ${fmt(m.dlina_m)} м · X = ${fmt(mk.x)} см · ` +
+        (mk.polos === 1 ? `1 отрез ${fmt(mk.dlinaM, 2)} м на ком` : `2 полосы по ${fmt(mk.x / 100, 2)} м крест-накрест на ком`) });
+  }
+  if (v.onSetka) {
+    const nuzhno = v.komD * 10;
+    const pod = podborSetki(nuzhno, k.setka);
+    r.setkaD = pod.d;
+    if (pod.d === null) {
+      r.preduprezhdeniya.push("setka");
+    } else {
+      const s = k.setka[v.setka] && k.setka[v.setka].d === pod.d ? k.setka[v.setka] : pod.varianty[0][1];
+      r.stroki.push({ id: "setka", gruppa: "Сетка для кома", poz: s.nazv, url: s.url,
+        kol: n, ed: "шт.",
+        upak: `${fmt(Math.ceil(n / s.upak))} уп. по ${s.upak} шт. · нужно d ${fmt(nuzhno)} мм` });
+    }
+  }
+  if (v.onGrunt) {
+    const g = k.grunt[v.grunt];
+    const litr = r.gruntNa1 * n;
+    r.stroki.push({ id: "grunt", gruppa: "Грунт", poz: g.nazv, url: g.url,
+      kol: litr, ed: "л",
+      upak: `${fmt(Math.ceil(litr / g.upak_l))} уп. по ${fmt(g.upak_l)} л · ${fmt(r.gruntNa1)} л на 1 яму` });
+  }
+  if (v.onKora) {
+    const kr = k.kora[v.kora];
+    // 1 мешок 60 л = 1 м² слоем ~5 см
+    const meshkov = Math.ceil(v.koraM2 * v.koraSloy / NORMY.koraSloy - 1e-9);
+    r.stroki.push({ id: "kora", gruppa: "Кора", poz: kr.nazv, url: kr.url,
+      kol: meshkov, ed: "меш.",
+      upak: `${fmt(meshkov * kr.upak_l)} л · ${fmt(v.koraM2, 2)} м² слоем ${fmt(v.koraSloy)} см` });
+  }
+  if (v.onTkan) {
+    const t = k.agrotkan[v.tkan];
+    r.tkan = polosyNaUchastok(v.tDl, v.tSh, v.tZap, t);
+    rulonVStroki(r, "tkan", "Агроткань", "Крепёж агроткани", t, r.tkan, k.krepezh[v.tKrep], NORMY.krepShag);
+  }
+  if (v.onSpan) {
+    const t = k.spanbond[v.span];
+    const sloi = Math.max(1, Math.round(v.sSloi));
+    r.span = polosyNaUchastok(v.sDl, v.sSh, v.sZap, t, sloi);
+    rulonVStroki(r, "span", "Спанбонд", "Крепёж спанбонда", t, r.span, k.krepezh[v.sKrep], NORMY.krepShag);
+  }
+  return r;
+}
+
+// Текстовая версия расчёта — для письма
+function tekstRascheta(r) {
+  return r.stroki.map(s => `${s.gruppa}: ${s.poz} — ${fmt(s.kol, s.d || 0)} ${s.ed} (${s.upak})`).join("\n");
+}
+
+function iskhodnye(r) {
+  const v = r.v;
+  const a = [
+    ["Ком", `Ø ${fmt(v.komD)} см, высота ${fmt(v.komH)} см, объём ${fmt(r.vKom)} л`],
+    ["Яма", `Ø ${fmt(v.yamaD)} см, глубина ${fmt(v.yamaH)} см, объём ${fmt(r.vYama)} л`],
+    ["Количество растений", `${fmt(r.n)} шт.`],
+    ["Грунт на 1 яму", `${fmt(r.gruntNa1)} л (уплотнение ×${fmt(v.kUpl, 2)})`],
+    ["Мульчирование корой", `${fmt(v.koraM2, 2)} м², слой ${fmt(v.koraSloy)} см`],
+  ];
+  if (v.onTkan) a.push(["Участок под агроткань", `${fmt(v.tDl, 1)} × ${fmt(v.tSh, 1)} м, подворот ${fmt(v.tZap)} см`]);
+  if (v.onSpan) a.push(["Участок под спанбонд", `${fmt(v.sDl, 1)} × ${fmt(v.sSh, 1)} м, слоёв ${fmt(v.sSloi)}, подворот ${fmt(v.sZap)} см`]);
+  return a;
+}
+
+// Документ Word. D — библиотека docx, kl — данные клиента (необязательно)
+function sozdatDokument(D, r, kl, data) {
+  const { Document, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, ShadingType } = D;
+  const shrift = "Calibri";
+  const p = (text, o = {}) => new Paragraph({ spacing: { after: 80 }, ...o.par,
+    children: [new TextRun({ text, font: shrift, size: o.size || 22, bold: o.bold, color: o.color })] });
+  const kletka = (text, o = {}) => new TableCell({
+    width: { size: o.w, type: WidthType.PERCENTAGE },
+    shading: o.head ? { type: ShadingType.CLEAR, color: "auto", fill: "1D6A49" } : undefined,
+    margins: { top: 60, bottom: 60, left: 100, right: 100 },
+    children: [new Paragraph({ alignment: o.right ? AlignmentType.RIGHT : AlignmentType.LEFT,
+      children: [new TextRun({ text, font: shrift, size: 20, bold: o.head, color: o.head ? "FFFFFF" : undefined })] })],
+  });
+  const tablica = (shapka, stroki, shiriny, pravo = []) => new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    rows: [
+      new TableRow({ tableHeader: true, children: shapka.map((t, i) => kletka(t, { head: true, w: shiriny[i] })) }),
+      ...stroki.map(s => new TableRow({ children: s.map((t, i) => kletka(t, { w: shiriny[i], right: pravo.includes(i) })) })),
+    ],
+  });
+
+  const deti = [
+    p("АМИНА · aminaplast.ru", { size: 18, color: "5B6A60", bold: true }),
+    p("Расчёт материалов для посадки", { size: 34, bold: true, par: { spacing: { after: 120 } } }),
+    p(`Дата расчёта: ${data}`, { size: 20, color: "5B6A60" }),
+  ];
+  if (kl && (kl.name || kl.org)) {
+    deti.push(p(`Для: ${[kl.name, kl.org].filter(Boolean).join(", ")}${kl.tel ? ", тел. " + kl.tel : ""}${kl.mail ? ", " + kl.mail : ""}`, { size: 20 }));
+  }
+  deti.push(p("Исходные данные", { size: 26, bold: true, par: { spacing: { before: 240, after: 100 } } }));
+  deti.push(tablica(["Параметр", "Значение"], iskhodnye(r), [40, 60]));
+  deti.push(p("Потребность в материалах", { size: 26, bold: true, par: { spacing: { before: 280, after: 100 } } }));
+  deti.push(tablica(["Материал", "Позиция", "Количество", "Упаковки / пояснение"],
+    r.stroki.map(s => [s.gruppa, s.poz, `${fmt(s.kol, s.d || 0)} ${s.ed}`, s.upak]), [16, 40, 14, 30], [2]));
+  if (kl && kl.dop) {
+    deti.push(p("Дополнительные данные", { size: 26, bold: true, par: { spacing: { before: 280, after: 100 } } }));
+    deti.push(p(kl.dop));
+  }
+  deti.push(p("Расчёт ориентировочный и не является коммерческим предложением: ком и яма считаются как цилиндры.",
+    { size: 18, color: "5B6A60", par: { spacing: { before: 240 } } }));
+  deti.push(p(`Цены и наличие: ${NORMY.pochtaZayavok}, aminaplast.ru`, { size: 20, bold: true }));
+
+  return new Document({
+    creator: "Амина", title: "Расчёт материалов для посадки",
+    sections: [{ properties: { page: { margin: { top: 1000, bottom: 1000, left: 1100, right: 1000 } } }, children: deti }],
+  });
+}
+
+if (typeof module !== "undefined") module.exports = { KATALOG, NORMY, raschet, meshkovinaNaKom, podborSetki, cilindrL, polosyNaUchastok, krepezhSht, tekstRascheta, sozdatDokument, fmt };
+</script>
+
+<!-- Работа со страницей -->
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const K = KATALOG;
+  const segodnya = new Date().toLocaleDateString("ru-RU");
+  $("sheet-date").textContent = segodnya;
+
+  // --- Заполнение списков ---
+  // Без <optgroup>: на iPhone разделы-группы показываются в меню серыми/неактивными,
+  // поэтому список плоский, а позиции просто идут подряд по группам
+  function zapolnit(sel, spisok, gruppa) {
+    const grupy = new Map();
+    spisok.forEach((x, i) => {
+      const g = gruppa ? gruppa(x) : "";
+      if (!grupy.has(g)) grupy.set(g, []);
+      grupy.get(g).push([i, x.nazv]);
+    });
+    sel.innerHTML = "";
+    for (const el of grupy.values()) el.forEach(([i, t]) => sel.append(new Option(t, i)));
+  }
+  zapolnit($("mesh"), K.meshkovina);
+  zapolnit($("grunt"), K.grunt, x => /Торф/i.test(x.nazv) ? "Торф" : /Субстрат/i.test(x.nazv) ? "Субстраты" : "Грунты и компост");
+  zapolnit($("kora"), K.kora, x => /сосны/i.test(x.nazv) ? "Кора сосны" : "Кора лиственницы");
+  zapolnit($("tkan"), K.agrotkan, x => `${x.plotn} г/м²`);
+  zapolnit($("span"), K.spanbond, x => x.cvet === "белый" ? "Белый — укрытие" : "Чёрный — от сорняков");
+  for (const id of ["t-krep", "s-krep"]) {
+    zapolnit($(id), K.krepezh);
+    $(id).prepend(new Option("Не считать", -1));
+  }
+
+  // Кнопки диаметров кома
+  K.komy.forEach((d, i) => {
+    const l = document.createElement("label");
+    l.innerHTML = `<input type="radio" name="kom" value="${d}"${i === 2 ? " checked" : ""}><span>${d}</span>`;
+    $("kom-seg").append(l);
+  });
+
+  const naiti = (spisok, re) => Math.max(0, spisok.findIndex(x => re.test(x.nazv)));
+  $("mesh").value = naiti(K.meshkovina, /190 г/);
+  $("grunt").value = naiti(K.grunt, /Садовая земля" 70/);
+  $("kora").value = naiti(K.kora, /средняя/);
+  $("tkan").value = naiti(K.agrotkan, /1,60 м × 100 м, 100 г\/м2, РФ/);
+  $("span").value = naiti(K.spanbond, /60 г\/м2.*белый/);
+  $("t-krep").value = naiti(K.krepezh, /Скобы/);
+  $("s-krep").value = naiti(K.krepezh, /Колышек.*15 см/);
+
+  // Поля — type="text" + inputmode: type="number" на Android/iPhone с русской раскладкой
+  // отдаёт пустое значение при вводе запятой (12,5), и расчёт считал 0
+  const num = id => { const x = parseFloat(String($(id).value).replace(/[\s ]/g, "").replace(/,/g, ".")); return isFinite(x) ? x : 0; };
+  document.querySelectorAll("input[data-num]").forEach(el => {
+    // Оставляем только цифры и один разделитель
+    el.addEventListener("input", () => {
+      const ochishch = el.value.replace(/\./g, ",").replace(/[^\d,]/g, "").replace(/,(?=.*,)/g, "");
+      if (ochishch !== el.value) el.value = ochishch;
+    });
+    // Касание по полю выделяет число — новое значение сразу заменяет старое (удобно, когда там 0)
+    // (выделяем и по click: иначе отпускание пальца/мыши сбрасывает выделение в курсор)
+    const vydelit = () => { try { el.setSelectionRange(0, el.value.length); } catch (e) {} };
+    let pervyiKlik = false;
+    el.addEventListener("focus", () => { pervyiKlik = true; setTimeout(vydelit, 0); });
+    el.addEventListener("click", () => { if (pervyiKlik) { pervyiKlik = false; vydelit(); } });
+    el.addEventListener("blur", () => { pervyiKlik = false; });
+    // Стрелки ↑/↓ на компьютере, как было у числовых полей
+    el.addEventListener("keydown", e => {
+      if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+      e.preventDefault();
+      const shag = parseFloat(el.step) || 1, min = parseFloat(el.min), max = parseFloat(el.max);
+      let x = num(el.id) + (e.key === "ArrowUp" ? shag : -shag);
+      if (isFinite(min)) x = Math.max(min, x);
+      if (isFinite(max)) x = Math.min(max, x);
+      el.value = String(+x.toFixed(4)).replace(".", ",");
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+  });
+  const komD = () => +document.querySelector('input[name="kom"]:checked').value;
+
+  // Сетки под нужный размер — в список выбора
+  function zapolnitSetku() {
+    const nuzhno = komD() * 10;
+    const pod = podborSetki(nuzhno, K.setka);
+    const sel = $("setka"), bylo = sel.value;
+    sel.innerHTML = "";
+    pod.varianty.forEach(([i, s]) => sel.append(new Option(s.nazv, i)));
+    if (pod.varianty.some(([i]) => String(i) === bylo)) sel.value = bylo;
+    sel.disabled = !pod.varianty.length;
+  }
+
+  // При смене кома — подставляем высоту, размер ямы и приствольного круга
+  function priSmeneKoma() {
+    const d = komD(), h = NORMY.komH(d);
+    $("kom-h").value = h;
+    $("yama-d").value = d + NORMY.zapas;
+    $("yama-h").value = h + NORMY.zapas;
+    zapolnitSetku();
+  }
+
+  function sobrat() {
+    return {
+      komD: komD(), komH: num("kom-h"), n: num("n"),
+      yamaD: num("yama-d"), yamaH: num("yama-h"),
+      onMesh: $("on-mesh").checked, mesh: +$("mesh").value, meshZap: num("mesh-zap"),
+      onSetka: $("on-setka").checked, setka: +$("setka").value,
+      onGrunt: $("on-grunt").checked, grunt: +$("grunt").value, kUpl: num("kupl") || 1,
+      onKora: $("on-kora").checked, kora: +$("kora").value, koraM2: num("kora-m2"), koraSloy: num("kora-sloy") || NORMY.koraSloy,
+      onTkan: $("on-tkan").checked, tkan: +$("tkan").value, tDl: num("t-dl"), tSh: num("t-sh"),
+      tZap: num("t-zap"), tKrep: +$("t-krep").value,
+      onSpan: $("on-span").checked, span: +$("span").value, sDl: num("s-dl"), sSh: num("s-sh"), sSloi: num("s-sloi") || 1,
+      sZap: num("s-zap"), sKrep: +$("s-krep").value,
+    };
+  }
+
+  let posledniy = null;
+  function obnovit() {
+    const v = sobrat();
+    for (const [id, on] of [["b-mesh", v.onMesh], ["b-setka", v.onSetka], ["b-grunt", v.onGrunt], ["b-kora", v.onKora], ["b-tkan", v.onTkan], ["b-span", v.onSpan]])
+      $(id).classList.toggle("off", !on);
+
+    const r = raschet(v, K);
+    posledniy = r;
+    const s = id => r.stroki.find(x => x.id === id);
+
+    $("r-kom").textContent = `Объём кома ${fmt(r.vKom)} л · растений ${fmt(r.n)} шт.`;
+    $("r-yama").textContent = `Объём ямы ${fmt(r.vYama)} л − ком ${fmt(r.vKom)} л = ${fmt(Math.max(0, r.vYama - r.vKom))} л грунта на 1 яму`;
+    const pr = r.preduprezhdeniya;
+    $("w-yama").hidden = !(pr.includes("yama-d") || pr.includes("yama-h"));
+    $("w-yama").textContent = [pr.includes("yama-d") && "Яма должна быть шире кома.", pr.includes("yama-h") && "Яма мельче высоты кома: ком будет торчать над землёй."].filter(Boolean).join(" ");
+    $("w-setka").hidden = !pr.includes("setka");
+    $("w-setka").textContent = "Сетки такого диаметра в каталоге нет (максимум d 1800 мм). Уточните у менеджера.";
+
+    const vyvod = (id, el) => { const x = s(id); $(el).textContent = x ? `${fmt(x.kol, x.d || 0)} ${x.ed} · ${x.upak}` : ""; };
+    vyvod("mesh", "r-mesh"); vyvod("setka", "r-setka"); vyvod("grunt", "r-grunt"); vyvod("kora", "r-kora");
+    for (const id of ["tkan", "span"]) {
+      const x = s(id), kr = s(id + "-krep");
+      $("r-" + id).textContent = x ? `${fmt(x.kol)} м² · ${x.upak}${kr ? ` · крепёж ${fmt(kr.kol)} шт.` : ""}` : "";
+    }
+
+    $("sheet-sum").textContent = `Ком Ø ${fmt(v.komD)} × ${fmt(v.komH)} см · яма Ø ${fmt(v.yamaD)} × ${fmt(v.yamaH)} см · ${fmt(r.n)} шт.`;
+    const sheet = $("sheet");
+    sheet.innerHTML = "";
+    if (!r.stroki.length) sheet.innerHTML = `<p class="hint" style="padding:12px 0">Включите хотя бы один материал.</p>`;
+    r.stroki.forEach(x => {
+      const d = document.createElement("div");
+      d.className = "line-item";
+      d.innerHTML = `<div class="li-name"></div><div class="li-val"></div><div class="li-pos"><a target="_blank" rel="noopener"></a></div><div class="li-pack"><em></em></div>`;
+      d.children[0].textContent = x.gruppa;
+      d.children[1].textContent = `${fmt(x.kol, x.d || 0)} ${x.ed}`;
+      const a = d.querySelector("a"); a.textContent = x.poz; a.href = x.url;
+      d.querySelector("em").textContent = x.upak;
+      sheet.append(d);
+    });
+  }
+
+  $("kom-seg").addEventListener("change", () => { priSmeneKoma(); obnovit(); });
+  document.querySelector(".blocks").addEventListener("input", obnovit);
+  document.querySelector(".blocks").addEventListener("change", obnovit);
+
+  function klient() {
+    return { name: $("k-name").value.trim(), tel: $("k-tel").value.trim(), mail: $("k-mail").value.trim(),
+      org: $("k-org").value.trim(), dop: $("k-dop").value.trim() };
+  }
+
+  // --- Word ---
+  $("btn-word").addEventListener("click", async () => {
+    const st = $("st-word");
+    if (typeof docx === "undefined") { st.className = "status err"; st.textContent = "Не загрузилась библиотека для Word. Проверьте интернет и обновите страницу."; return; }
+    try {
+      const doc = sozdatDokument(docx, posledniy, klient(), segodnya);
+      const blob = await docx.Packer.toBlob(doc);
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `Расчет_OKS_${new Date().toISOString().slice(0, 10)}.docx`;
+      document.body.append(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+      st.className = "status ok"; st.textContent = "Файл сформирован, проверьте папку «Загрузки».";
+    } catch (e) {
+      st.className = "status err"; st.textContent = "Не удалось сформировать файл: " + e.message;
+    }
+  });
+  $("btn-to-form").addEventListener("click", () => { $("form-send").scrollIntoView({ behavior: "smooth" }); $("k-dop").focus({ preventScroll: true }); });
+
+  // --- Отправка через FormSubmit ---
+  $("form-send").addEventListener("submit", async e => {
+    e.preventDefault();
+    const st = $("st-send"), kl = klient();
+    if (!kl.name || !kl.tel) { st.className = "status err"; st.textContent = "Укажите имя и телефон, чтобы менеджер мог связаться."; return; }
+    if (!$("k-soglasie").checked) { st.className = "status err"; st.textContent = "Отметьте согласие на обработку персональных данных."; return; }
+    const btn = $("btn-send"); btn.disabled = true; st.className = "status"; st.textContent = "Отправляем…";
+    try {
+      const v = posledniy.v;
+      const otvet = await fetch(`https://formsubmit.co/ajax/${NORMY.pochtaZayavok}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          _subject: `Калькулятор для ландшафтных работ и работ с ОКС: ${kl.org || kl.name}`,
+          _template: "table",
+          _replyto: kl.mail || undefined,
+          "Имя": kl.name, "Телефон": kl.tel, "E-mail": kl.mail, "Компания": kl.org,
+          "Дополнительные данные": kl.dop,
+          "Ком и яма": `Ком Ø ${v.komD} × ${v.komH} см, яма Ø ${v.yamaD} × ${v.yamaH} см, растений ${posledniy.n} шт.`,
+          "Расчёт": tekstRascheta(posledniy),
+          "Дата": segodnya,
+        }),
+      });
+      const d = await otvet.json().catch(() => ({}));
+      if (!otvet.ok || String(d.success) !== "true") throw new Error(d.message || `код ${otvet.status}`);
+      st.className = "status ok"; st.textContent = "Заявка отправлена. Менеджер свяжется с вами в рабочее время.";
+      $("form-send").reset();
+    } catch (err) {
+      st.className = "status err";
+      st.textContent = `Не получилось отправить (${err.message}). Скачайте расчёт в Word и пришлите его на ${NORMY.pochtaZayavok}.`;
+    } finally { btn.disabled = false; }
+  });
+
+  priSmeneKoma(); obnovit();
+})();
+</script>
+
+</body>
+</html>
